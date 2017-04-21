@@ -17,6 +17,7 @@ class OpenNoteViewController: UIViewController {
     
     var databaseRef: FIRDatabaseReference!
     var note: Note?
+    let uid = FIRAuth.auth()?.currentUser?.uid
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -34,8 +35,14 @@ class OpenNoteViewController: UIViewController {
     }
     
     @IBAction func SaveEditAction(_ sender: Any) {
-        let uid = FIRAuth.auth()?.currentUser?.uid
-        databaseRef.child(uid!).setValue(["\(TitleTF.text!)": "1\(NoteTV.text!)"])
+        databaseRef.child(uid!).child((note?.title)!).removeValue()
+        databaseRef.child(uid!).updateChildValues(["\(TitleTF.text!)": "1\(NoteTV.text!)"])
+        
+        _ = navigationController?.popViewController(animated: true)
+    }
+    
+    @IBAction func DeleteNoteAction(_ sender: Any) {
+        databaseRef.child(uid!).child((note?.title)!).removeValue()
         
         _ = navigationController?.popViewController(animated: true)
     }

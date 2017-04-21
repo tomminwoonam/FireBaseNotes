@@ -12,14 +12,19 @@ import FirebaseAuth
 import FirebaseDatabase
 import SwiftyJSON
 
-class NotesHomeViewController: UIViewController, UITableViewDelegate, UITableViewDataSource {
+class NotesHomeViewController:
+    UIViewController, UITableViewDelegate, UITableViewDataSource, UISearchBarDelegate, UISearchDisplayDelegate, UISearchResultsUpdating {
     @IBOutlet weak var notesTable: UITableView!
     @IBOutlet weak var UIDLB: UILabel!
+    @IBOutlet weak var TitleSearchBar: UISearchBar!
     
     var FBUID = FIRAuth.auth()?.currentUser
     var notesArray: [Note]?
+    var arrayToDisplay: [Note]?
     var databaseRef: FIRDatabaseReference!
     var notesDictionary: Dictionary<String, String>?
+    let searchController = UISearchController(searchResultsController: nil)
+    var searchedTitle: String?
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -29,9 +34,14 @@ class NotesHomeViewController: UIViewController, UITableViewDelegate, UITableVie
         databaseRef = FIRDatabase.database().reference()
         notesTable.delegate = self
         notesTable.dataSource = self
-        UIDLB.text = FBUID?.uid
+        
+        TitleSearchBar.delegate = self
+        searchController.searchResultsUpdater = self
+        searchController.dimsBackgroundDuringPresentation = false
+        
         
         // need to change to populate the notesDictionary and keep observing
+        arrayToDisplay = [Note]()
         retrieveNote()
     }
     
@@ -41,11 +51,10 @@ class NotesHomeViewController: UIViewController, UITableViewDelegate, UITableVie
     }
     
     func retrieveNote() {
-        notesArray = [Note]()
         databaseRef.child(FBUID!.uid).observe(.value, with: {
             (snapshot) in
+            self.notesArray = [Note]()
             let personsNotes = JSON(snapshot.value!)
-            print(personsNotes)
             var numNotes = 0
             
             //person's Notes
@@ -57,8 +66,8 @@ class NotesHomeViewController: UIViewController, UITableViewDelegate, UITableVie
                 self.notesArray?.append(newNote)
                 numNotes += 1
             }
-            print(self.notesArray!.count)
             
+            self.arrayToDisplay = self.notesArray
             self.notesTable.reloadData()
         })
     }
@@ -77,15 +86,46 @@ class NotesHomeViewController: UIViewController, UITableViewDelegate, UITableVie
     }
     
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return self.notesArray!.count
+        return self.arrayToDisplay!.count
     }
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "noteCell", for: indexPath)
         
-        cell.textLabel?.text = self.notesArray![indexPath.row].title
+        cell.textLabel?.text = self.arrayToDisplay![indexPath.row].title
         
         return cell
+    }
+    
+    func updateSearchResults(for searchController: UISearchController) {
+        arrayToDisplay = [Note]()
+        if searchedTitle == "" {
+            self.arrayToDisplay = self.notesArray
+        } else {
+            for element in notesArray! {
+                print(element.title.lowercased())
+                if element.title.lowercased().range(of: searchedTitle!) != nil {
+                    arrayToDisplay?.append(element)
+                }
+            }
+        }
+        notesTable.reloadData()
+    }
+    
+    func searchBarCancelButtonClicked(_ searchBar: UISearchBar) {
+        updateSearchResults(for: searchController)
+    }
+    
+    
+    func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
+        searchedTitle = searchText.lowercased()
+        updateSearchResults(for: searchController)
+    }
+    
+    func searchBarTextDidBeginEditing(_ searchBar: UISearchBar) {
+        TitleSearchBar.autocorrectionType = .no
+        TitleSearchBar.autocapitalizationType = .none
+        TitleSearchBar.spellCheckingType = .no
     }
     
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {

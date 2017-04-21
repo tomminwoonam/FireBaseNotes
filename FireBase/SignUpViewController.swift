@@ -23,6 +23,7 @@ class SignUpViewController: UIViewController {
         // Do any additional setup after loading the view, typically from a nib.
         self.hideKeyboardWhenTappedAround()
         databaseRef = FIRDatabase.database().reference()
+        EmailTF.autocorrectionType = .no
     }
     
     override func didReceiveMemoryWarning() {
